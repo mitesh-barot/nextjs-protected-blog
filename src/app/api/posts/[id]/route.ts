@@ -4,13 +4,13 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Post } from "@/models/Post";
 import { postSchema } from "@/schemas/postSchema";
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
+  const { id } = params;
 
   await connectToDatabase();
   const post = await Post.findById(id);
@@ -53,13 +53,13 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await params;
+  const { id } = params;
   await connectToDatabase();
   const result = await Post.findOneAndDelete({
     _id: id,
