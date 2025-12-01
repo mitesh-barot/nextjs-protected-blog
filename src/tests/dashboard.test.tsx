@@ -1,39 +1,64 @@
-import Dashboard from "@/app/dashboard/page";
-import { render, screen } from "@testing-library/react";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
+import Dashboard from '@/app/dashboard/page';
+import { render, screen } from '@testing-library/react';
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 
-jest.mock("next-auth");
-jest.mock("next/navigation", () => ({
+jest.mock('next-auth');
+jest.mock('next/navigation', () => ({
   redirect: jest.fn(),
+  useRouter: () => ({
+    refresh: jest.fn(),
+    push: jest.fn(),
+  }),
 }));
 
-describe("Dashboard Page", () => {
-  it("redirects to login if not authenticated", async () => {
-    (getServerSession as jest.Mock).mockResolvedValue(null);
+jest.mock('@/models/Post');
 
-    await Dashboard({ searchParams: {} });
+const mockedSession = getServerSession as jest.Mock;
+const mockedRedirect = redirect as jest.Mock;
 
-    expect(redirect).toHaveBeenCalledWith("/login");
+beforeEach(() => {
+  jest.clearAllMocks();
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ posts: [], total: 0 }),
+  });
+});
+
+describe('Dashboard Page', () => {
+  it('redirects when not logged in', async () => {
+    mockedSession.mockResolvedValue(null);
+    await Dashboard({ searchParams: Promise.resolve({}) });
+    expect(mockedRedirect).toHaveBeenCalledWith('/login');
   });
 
-  it("renders posts when authenticated", async () => {
-    (getServerSession as jest.Mock).mockResolvedValue({
-      user: { id: "123", name: "Mitesh" },
-    });
+  it('shows empty state', async () => {
+    mockedSession.mockResolvedValue({ user: { id: '123' } });
 
-    global.fetch = jest.fn().mockResolvedValue({
+    const Page = await Dashboard({ searchParams: Promise.resolve({}) });
+
+    render(Page); // FIXED — no <Page />
+    expect(screen.getByText(/no posts yet/i)).toBeInTheDocument();
+  });
+
+  it('renders posts', async () => {
+    mockedSession.mockResolvedValue({ user: { id: '123' } });
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          posts: [{ _id: "1", title: "Test Post" }],
-          total: 1,
-        }),
+      json: async () => ({
+        posts: [
+          { _id: '1', title: 'Hello' },
+          { _id: '2', title: 'World' },
+        ],
+        total: 2,
+      }),
     });
 
-    const Component = await Dashboard({ searchParams: {} });
-    render(Component);
+    const Page = await Dashboard({ searchParams: Promise.resolve({}) });
 
-    expect(screen.getByText("Test Post")).toBeInTheDocument();
+    render(Page); // ✅ FIXED
+
+    expect(screen.getByText('My Posts (2)')).toBeInTheDocument();
   });
 });

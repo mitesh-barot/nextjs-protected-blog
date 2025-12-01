@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: '.', // this fixes the "Next.js package not found" panic
+  },
 };
 
 export default nextConfig;

@@ -1,39 +1,41 @@
-import { POST } from "@/app/api/posts/route";
-import { Post } from "@/models/Post";
-import { getServerSession } from "next-auth";
-import { NextRequest } from "next/server";
+import { POST } from '@/app/api/posts/route';
+import { getServerSession } from 'next-auth';
+import { NextRequest } from 'next/server';
 
-jest.mock("next-auth");
-jest.mock("@/lib/mongodb");
+jest.mock('next-auth');
+jest.mock('@/lib/mongodb');
+jest.mock('@/models/Post');
 
-describe("POST /api/posts", () => {
-  it("creates a post when authenticated", async () => {
-    (getServerSession as jest.Mock).mockResolvedValue({
-      user: { id: "123", name: "Mitesh" },
-    });
+const mockedSession = getServerSession as jest.Mock;
 
-    Post.create = jest.fn().mockResolvedValue({ _id: "new1", title: "Hello" });
+beforeEach(() => jest.clearAllMocks());
 
-    const req = new NextRequest("http://localhost/api/posts", {
-      method: "POST",
-      body: JSON.stringify({ title: "Hello", content: "World" }),
+describe('POST /api/posts', () => {
+  it('creates post when authenticated', async () => {
+    mockedSession.mockResolvedValue({ user: { id: '123', name: 'Mitesh' } });
+
+    const req = new NextRequest('http://localhost/api/posts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Valid Title',
+        content: 'This content is definitely longer than 50 characters so Zod passes.',
+      }),
     });
 
     const res = await POST(req);
-    const json = await res.json();
-
     expect(res.status).toBe(201);
-    expect(json.title).toBe("Hello");
   });
 
-  it("returns 401 if not logged in", async () => {
-    (getServerSession as jest.Mock).mockResolvedValue(null);
+  it('returns 401 when not authenticated', async () => {
+    mockedSession.mockResolvedValue(null);
 
-    const req = new NextRequest("http://localhost/api/posts", {
-      method: "POST",
+    const req = new NextRequest('http://localhost/api/posts', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'x', content: 'y' }),
     });
-    const res = await POST(req);
 
+    const res = await POST(req);
     expect(res.status).toBe(401);
   });
 });

@@ -1,33 +1,30 @@
-// src/app/dashboard/page.tsx — FINAL 100% WORKING VERSION
-import DeleteButton from "@/components/DeleteButton";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { cookies } from "next/headers";
-import Link from "next/link";
-import { redirect } from "next/navigation";
+import DeleteButton from '@/components/DeleteButton';
+import { authOptions } from '@/lib/auth';
+import { Post } from '@/types/post';
+import { getServerSession } from 'next-auth';
+import { cookies } from 'next/headers';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 const API_BASE = process.env.NEXTAUTH_URL
   ? `${process.env.NEXTAUTH_URL}/api`
-  : "http://localhost:3000/api";
+  : 'http://localhost:3000/api';
 
 const POSTS_PER_PAGE = 5;
 
 async function getPosts(page: number) {
   const cookieStore = await cookies();
   const sessionToken =
-    cookieStore.get("__Secure-next-auth.session-token")?.value ??
-    cookieStore.get("next-auth.session-token")?.value;
+    cookieStore.get('__Secure-next-auth.session-token')?.value ??
+    cookieStore.get('next-auth.session-token')?.value;
 
-  const headers: HeadersInit = { "Content-Type": "application/json" };
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
   if (sessionToken) headers.Cookie = `next-auth.session-token=${sessionToken}`;
 
-  const res = await fetch(
-    `${API_BASE}/posts?page=${page}&limit=${POSTS_PER_PAGE}`,
-    {
-      headers,
-      cache: "no-store",
-    }
-  );
+  const res = await fetch(`${API_BASE}/posts?page=${page}&limit=${POSTS_PER_PAGE}`, {
+    headers,
+    cache: 'no-store',
+  });
 
   if (!res.ok) return { posts: [], total: 0 };
 
@@ -49,7 +46,7 @@ export default async function Dashboard({
   const page = Math.max(1, Number(pageParam) || 1);
 
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  if (!session) redirect('/login');
 
   const { posts, total } = await getPosts(page);
   const totalPages = Math.ceil(total / POSTS_PER_PAGE);
@@ -71,38 +68,25 @@ export default async function Dashboard({
       {posts.length === 0 ? (
         <div className="text-center py-24 bg-gray-50 rounded-2xl">
           <p className="text-2xl text-gray-600 mb-6">No posts yet</p>
-          <Link
-            href="/create"
-            className="text-purple-600 text-lg font-medium hover:underline"
-          >
+          <Link href="/create" className="text-purple-600 text-lg font-medium hover:underline">
             Write your first post
           </Link>
         </div>
       ) : (
         <>
           <div className="grid gap-8">
-            {posts.map((post: any) => (
+            {posts.map((post: Post) => (
               <div
                 key={post._id}
                 className="bg-white p-10 rounded-2xl shadow-lg hover:shadow-2xl transition-all border border-gray-100"
               >
-                <h2 className="text-3xl font-bold mb-4 text-gray-800">
-                  {post.title}
-                </h2>
-                <p className="text-gray-600 mb-8 leading-relaxed line-clamp-3">
-                  {post.content}
-                </p>
+                <h2 className="text-3xl font-bold mb-4 text-gray-800">{post.title}</h2>
+                <p className="text-gray-600 mb-8 leading-relaxed line-clamp-3">{post.content}</p>
                 <div className="flex gap-8 text-sm font-medium">
-                  <Link
-                    href={`/post/${post._id}`}
-                    className="text-purple-600 hover:underline"
-                  >
+                  <Link href={`/post/${post._id}`} className="text-purple-600 hover:underline">
                     View Full Post
                   </Link>
-                  <Link
-                    href={`/create?edit=${post._id}`}
-                    className="text-blue-600 hover:underline"
-                  >
+                  <Link href={`/create?edit=${post._id}`} className="text-blue-600 hover:underline">
                     Edit
                   </Link>
                   <DeleteButton id={post._id} />
