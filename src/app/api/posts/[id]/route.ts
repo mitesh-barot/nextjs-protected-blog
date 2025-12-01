@@ -1,70 +1,47 @@
-// src/app/api/posts/[id]/route.ts
-import { authOptions } from "@/lib/auth";
-import { connectToDatabase } from "@/lib/mongodb";
-import { Post } from "@/models/Post";
-import { postSchema } from "@/schemas/postSchema";
-import { getServerSession } from "next-auth";
-import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase } from '@/lib/mongodb';
+import { Post } from '@/models/Post';
+import { postSchema } from '@/schemas/postSchema';
+import { NextResponse } from 'next/server';
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
-
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   await connectToDatabase();
-  const post = await Post.findById(id);
-  if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { id } = await params;
+
+  const post = await Post.findById(id).lean();
+  if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+
   return NextResponse.json(post);
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  await connectToDatabase();
+  const { id } = await params;
 
-  const body = await req.json();
-
-  // SAME VALIDATION AS FORM
+  const body = await request.json();
   const validation = postSchema.safeParse(body);
-  if (!validation.success) {
-    return NextResponse.json(
-      { errors: validation.error.format() },
-      { status: 400 }
-    );
+
+  if (!validation.success)
+    return NextResponse.json({ errors: validation.error.format() }, { status: 400 });
+
+  const updated = await Post.findByIdAndUpdate(id, validation.data, {
+    new: true,
+  }).lean();
+
+  if (!updated) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+
+  return NextResponse.json(updated, { status: 200 });
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  await connectToDatabase();
+
+  const { id } = await params;
+
+  const deleted = await Post.findByIdAndDelete(id);
+
+  if (!deleted) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
   }
 
-  await connectToDatabase();
-
-  const post = await Post.findOneAndUpdate(
-    { _id: params.id, authorId: session.user.id },
-    validation.data,
-    { new: true }
-  );
-
-  if (!post)
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
-
-  return NextResponse.json(post);
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { id } = params;
-  await connectToDatabase();
-  const result = await Post.findOneAndDelete({
-    _id: id,
-    authorId: session.user.id,
-  });
-  if (!result) return new Response(null, { status: 404 });
-  return new Response(null, { status: 204 });
+  return NextResponse.json({ message: 'Post deleted successfully' }, { status: 200 });
 }

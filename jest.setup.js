@@ -8,6 +8,10 @@ jest.mock('next/headers', () => ({
   }),
 }));
 
+jest.mock('@/lib/mongodb', () => ({
+  connectToDatabase: jest.fn().mockResolvedValue({}),
+}));
+
 // Silence baseline-browser-mapping warning
 jest.mock('baseline-browser-mapping', () => ({}));
 

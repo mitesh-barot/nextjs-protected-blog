@@ -13,6 +13,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('@/models/Post');
+jest.mock('@/lib/mongodb');
 
 const mockedSession = getServerSession as jest.Mock;
 const mockedRedirect = redirect as jest.Mock;
